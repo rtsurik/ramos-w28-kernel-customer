@@ -1,0 +1,10 @@
+#
+# Kconfig to support customer boards
+#
+
+config MACH_MESON6_W28
+	depends on ARCH_MESON6
+	bool "Meson6 w28 board"
+	help
+	  Support for Amlogic Meson6 w28 customer platform.
+
