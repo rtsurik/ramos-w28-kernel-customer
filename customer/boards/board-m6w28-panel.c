@@ -143,8 +143,8 @@ static void m6g04_backlight_power_ctrl(Bool_t status)
 	printk("%s() Power %s\n", __FUNCTION__, (status ? "ON" : "OFF"));
 }
 
-#define BL_MID_LEVEL    128
-#define BL_MAPPED_MID_LEVEL    102
+#define MIN_LEVEL  0x0d
+#define MAX_LEVEL  0x00
 static void m6g04_set_backlight_level(unsigned level)
 {    
     printk(KERN_DEBUG "%s: %d\n", __FUNCTION__, level);
@@ -155,18 +155,18 @@ static void m6g04_set_backlight_level(unsigned level)
 		m6g04_backlight_power_ctrl(OFF);		
 	}
 	else {
-		if (level > BL_MID_LEVEL) {
-			level = ((level - BL_MID_LEVEL)*(BL_MAX_LEVEL - BL_MAPPED_MID_LEVEL))/(BL_MAX_LEVEL - BL_MID_LEVEL) + BL_MAPPED_MID_LEVEL; 
-		} else {
-			//level = (level*BL_MAPPED_MID_LEVEL)/BL_MID_LEVEL;
-			level = ((level - BL_MIN_LEVEL)*(BL_MAPPED_MID_LEVEL - BL_MIN_LEVEL))/(BL_MID_LEVEL - BL_MIN_LEVEL) + BL_MIN_LEVEL; 
-		}
 #if (BL_CTL==BL_CTL_GPIO)
-	    level = DIM_MIN - ((level - BL_MIN_LEVEL) * (DIM_MIN - DIM_MAX)) / (BL_MAX_LEVEL - BL_MIN_LEVEL);
-	    aml_set_reg32_bits(P_LED_PWM_REG0, level, 0, 4);
+    if (level < 20){
+        level = 15;
+    }
+    else {
+        level = MIN_LEVEL - ((level - 20) * (MIN_LEVEL - MAX_LEVEL)) / 235;     
+    }
+    aml_set_reg32_bits(P_LED_PWM_REG0, level, 0, 4);
 #elif (BL_CTL==BL_CTL_PWM)
-		level = (PWM_MAX - PWM_MIN) * (level - BL_MIN_LEVEL) / (BL_MAX_LEVEL - BL_MIN_LEVEL) + PWM_MIN;	
-		aml_write_reg32(P_PWM_PWM_C, (level << 16) | (PWM_CNT - level));  //pwm	duty	
+    level = level * PWM_MAX / BL_MAX_LEVEL ;
+    aml_set_reg32_bits(P_PWM_PWM_D, (PWM_MAX - level), 0, 16);  //pwm low
+    aml_set_reg32_bits(P_PWM_PWM_D, level, 16, 16);                             //pwm high
 #endif
 		if (bl_status == OFF) 
 			m6g04_backlight_power_ctrl(ON);			
